@@ -18,6 +18,10 @@ int iFPSCap;
 bool bFPSCap;
 bool bFOVAdjust;
 float fFOVAdjust;
+bool bShadowQuality;
+int iShadowQuality;
+int iCustomResX;
+int iCustomResY;
 
 // Variables
 float fDesktopRight;
@@ -85,14 +89,14 @@ void ReadConfig()
     iFPSCap = config.GetInteger("FPS Cap", "Value", -1);
     bFPSCap = config.GetInteger("FPS Cap", "Enabled", true);
     bMovieFix = config.GetBoolean("Fix Movies", "Enabled", true);
-    bResFix = config.GetBoolean("Custom Resolution", "Enabled", true);
+    bResFix = config.GetBoolean("Fix Resolution", "Enabled", true);
     bHUDFix = config.GetBoolean("Fix UI", "Enabled", true);
-    //iShadowQuality = config.GetInteger("Shadow Quality", "Value", -1);
-    //bShadowQuality = config.GetBoolean("Shadow Quality", "Enabled", true);
+    iShadowQuality = config.GetInteger("Shadow Quality", "Value", -1);
+    bShadowQuality = config.GetBoolean("Shadow Quality", "Enabled", true);
     bFOVAdjust = config.GetBoolean("Increase FOV", "Enabled", true);
     fFOVAdjust = config.GetFloat("Increase FOV", "Value", -1);
-    //iCustomResX = config.GetInteger("Custom Resolution", "Width", -1);
-    //iCustomResY = config.GetInteger("Custom Resolution", "Height", -1);
+    iCustomResX = config.GetInteger("Custom Resolution", "Width", -1);
+    iCustomResY = config.GetInteger("Custom Resolution", "Height", -1);
 
     RECT desktop;
     GetWindowRect(GetDesktopWindow(), &desktop);
