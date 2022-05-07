@@ -50,9 +50,10 @@ void __declspec(naked) FOV1_CC()
 {
     __asm
     {
-        movss [esp + 0x0C], xmm0
-        movss xmm0, [eax + 0x3C]
-        addss xmm0, [fFOVAdjust]
+        fld dword ptr[ebx + 0x10]
+        fadd [fFOVAdjust]
+        xorps xmm0, xmm0
+        fstp dword ptr[esi + 0x0000008C]
         jmp [FOV1ReturnJMP]
     }
 }
@@ -103,36 +104,40 @@ void ReadConfig()
     fDesktopRight = (float)desktop.right;
     fDesktopBottom = (float)desktop.bottom;
     fDesktopAspect = (float)desktop.right / (float)desktop.bottom;
+    fCustomAspect = (float)iCustomResX / (float)iCustomResY;
 }
 
-void Resolution()
+void AspectRatio()
 {
     if (bResFix)
-    { 
-        // Address of signature = rerev.exe + 0x00751635
-        // "\x85\xF6\x0F\x84\x00\x00\x00\x00\x81\xFE", "xxxx????xx"
-        //uint8_t* CrashFixScanResult = Memory::PatternScan(baseModule, "85 F6 0F 84 ? ? ? ? 81 FE");
-        //if (CrashFixScanResult) {
-        //    Memory::PatchBytes((intptr_t)CrashFixScanResult, "\x90\x90", 2); // If you can't fix it, NOP it
-        //    std::cout << "NOP'd crash area" << std::endl;
-        //}
-
-        //Address of signature = rerev.exe + 0x00CD3860
-        //"\x31\x36\x3A\x39", "xxxx"
+    {
+        // Address of signature = rerev.exe + 0x00CD3860
+        // "\x31\x36\x3A\x39", "xxxx"
         uint8_t* SixteenNineScanResult = Memory::PatternScan(baseModule, "31 36 3A 39");
         if (SixteenNineScanResult) {
             Memory::PatchBytes((intptr_t)SixteenNineScanResult, "\x44\x45\x46\x41\x55\x4c\x54", 7); // Write DEFAULT to aspect       
             std::cout << "Wrote DEFAULT to aspect" << std::endl;
         }
 
-        // Replace 640x480 with chosen res
-        string newRes_string = std::to_string((int)fDesktopRight) + "x" + std::to_string((int)fDesktopBottom);
-        uint8_t* TenEightyScanResult = Memory::PatternScan(baseModule, "36 34 30 78 34 38 30");
-        if (TenEightyScanResult) {
-            Memory::PatchBytes((intptr_t)TenEightyScanResult, newRes_string.c_str(), 9); // 3440x1440
-            std::cout << "640x480 replaced with: " << newRes_string << std::endl;
+        // Address of signature = rerev.exe + 0x00751635
+        // "\x85\xF6\x0F\x84\x00\x00\x00\x00\x81\xFE", "xxxx????xx"
+        uint8_t* CrashFixScanResult = Memory::PatternScan(baseModule, "85 F6 0F 84 ? ? ? ? 81 FE");
+        if (CrashFixScanResult) {
+            Memory::PatchBytes((intptr_t)CrashFixScanResult, "\x90\x90", 2); // Should mitigate crashes
+            std::cout << "NOP'd crash area" << std::endl;
         }
 
+        // Replace 640x480 with chosen res
+        string newRes = std::to_string((int)fDesktopRight) + "x" + std::to_string((int)fDesktopBottom);
+        if (iCustomResX > 0 && iCustomResY > 0)
+        {
+            newRes = std::to_string(iCustomResX) + "x" + std::to_string(iCustomResY);
+        }
+        uint8_t* TenEightyScanResult = Memory::PatternScan(baseModule, "36 34 30 78 34 38 30");
+        if (TenEightyScanResult) {
+            Memory::PatchBytes((intptr_t)TenEightyScanResult, newRes.c_str(), 9); // 3440x1440
+            std::cout << "640x480 replaced with: " << newRes << std::endl;
+        }
     }
 }
 
@@ -159,6 +164,10 @@ void HUDFix()
             int HudLeftOffsetHookLength = 8;
             DWORD HudLeftOffsetAddress = (intptr_t)HudLeftOffsetScanResult;
             HudLeftOffsetValue = (float)fNativeAspect / fDesktopAspect;
+            if (iCustomResX > 0 && iCustomResY > 0)
+            {
+                HudLeftOffsetValue = fCustomAspect;
+            }
             HudLeftOffsetReturnJMP = HudLeftOffsetAddress + HudLeftOffsetHookLength;
             Memory::Hook((void*)HudLeftOffsetAddress, HudLeftOffset_CC, HudLeftOffsetHookLength);
             std::cout << "Hud Left Offset set to: " << HudLeftOffsetValue << std::endl;
@@ -170,12 +179,13 @@ void AdjustFOV()
 {
     if (bFOVAdjust && fFOVAdjust > 0)
     {
-        //Address of signature = rerev.exe + 0x0007246F
-        // "\xF3\x0F\x00\x00\x00\x00\xF3\x0F\x00\x00\x00\xF3\x0F\x00\x00\x00\x00\x00\x00\xF3\x0F\x00\x00\x00\x00\xF3\x0F\x00\x00\x00\xF3\x0F\x00\x00\x00\x00\xF3\x0F\x00\x00\x00\xF3\x0F\x00\x00\x00\xE8", "xx????xx???xx??????xx????xx???xx????xx???xx???x"   
-        uint8_t* FOV1ScanResult = Memory::PatternScan(baseModule, "F3 0F ? ? ? ? F3 0F ? ? ? F3 0F ? ? ? ? ? ? F3 0F ? ? ? ? F3 0F ? ? ? F3 0F ? ? ? ? F3 0F ? ? ? F3 0F ? ? ? E8");
+        // Address of signature = rerev.exe + 0x00096AE6
+        // "\xD9\x43\x00\x0F\x57\x00\xD9\x9E\x00\x00\x00\x00\xD9\x43\x00\x8B\xCB", "xx?xx?xx????xx?xx"
+        uint8_t* FOV1ScanResult = Memory::PatternScan(baseModule, "D9 43 ? 0F 57 ? D9 9E ? ? ? ? D9 43 ? 8B CB");
+  
         if (FOV1ScanResult)
         {
-            int FOV1HookLength = 11;
+            int FOV1HookLength = 12;
             DWORD FOV1Address = (intptr_t)FOV1ScanResult;
             FOV1ReturnJMP = FOV1Address + FOV1HookLength;
             Memory::Hook((void*)FOV1Address, FOV1_CC, FOV1HookLength);
@@ -232,15 +242,14 @@ void FPSCap()
 
 DWORD __stdcall Main(void*)
 {
-    Sleep(400); // delay first
-
     #if _DEBUG
     AllocConsole();
     freopen_s((FILE**)stdout, "CONOUT$", "w", stdout);
     std::cout << "Console initiated" << std::endl;
     #endif	
     ReadConfig();
-    Resolution();
+    AspectRatio();
+    Sleep(1000); // delay first
     HUDFix();
     AdjustFOV();
     FPSCap();
