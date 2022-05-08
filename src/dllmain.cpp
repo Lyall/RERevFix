@@ -66,6 +66,9 @@ void __declspec(naked) HudScale_CC()
     __asm
     {
         movss xmm0, [HudScaleValue]
+        xorps xmm1, xmm1
+        cvtsi2ss xmm1, ebx
+        divss xmm0, xmm1 
         jmp[HudScaleReturnJMP]
     }
 }
@@ -82,6 +85,31 @@ void __declspec(naked) HudLeftOffset_CC()
     }
 }
 
+// Shadow Quality Hook
+DWORD ShadowQualityReturnJMP;
+void __declspec(naked) ShadowQuality_CC()
+{
+    __asm
+    {
+        mov eax, [iShadowQuality]
+        add eax, 31
+        push esi
+        jmp[ShadowQualityReturnJMP]
+    }
+}
+
+// Movie Fix Hook
+DWORD MovieFixReturnJMP;
+int MovieFixValue;
+void __declspec(naked) MovieFix_CC()
+{
+    __asm
+    {
+        fimul [MovieFixValue]
+        mov[esp + 0x10], eax
+        jmp[MovieFixReturnJMP]
+    }
+}
 
 void ReadConfig()
 {
@@ -115,8 +143,10 @@ void AspectRatio()
         // "\x31\x36\x3A\x39", "xxxx"
         uint8_t* SixteenNineScanResult = Memory::PatternScan(baseModule, "31 36 3A 39");
         if (SixteenNineScanResult) {
-            Memory::PatchBytes((intptr_t)SixteenNineScanResult, "\x44\x45\x46\x41\x55\x4c\x54", 7); // Write DEFAULT to aspect       
+            Memory::PatchBytes((intptr_t)SixteenNineScanResult, "\x44\x45\x46\x41\x55\x4c\x54", 7); // Write DEFAULT to aspect   
+            #if _DEBUG
             std::cout << "Wrote DEFAULT to aspect" << std::endl;
+            #endif
         }
 
         // Address of signature = rerev.exe + 0x00751635
@@ -124,7 +154,9 @@ void AspectRatio()
         uint8_t* CrashFixScanResult = Memory::PatternScan(baseModule, "85 F6 0F 84 ? ? ? ? 81 FE");
         if (CrashFixScanResult) {
             Memory::PatchBytes((intptr_t)CrashFixScanResult, "\x90\x90", 2); // Should mitigate crashes
+            #if _DEBUG
             std::cout << "NOP'd crash area" << std::endl;
+            #endif      
         }
 
         // Replace 640x480 with chosen res
@@ -136,7 +168,9 @@ void AspectRatio()
         uint8_t* TenEightyScanResult = Memory::PatternScan(baseModule, "36 34 30 78 34 38 30");
         if (TenEightyScanResult) {
             Memory::PatchBytes((intptr_t)TenEightyScanResult, newRes.c_str(), 9); // 3440x1440
+            #if _DEBUG
             std::cout << "640x480 replaced with: " << newRes << std::endl;
+            #endif
         }
     }
 }
@@ -145,19 +179,24 @@ void HUDFix()
 {
     if (bHUDFix)
     {
-        // Address of signature = rerev.exe + 0x00789572
-        // "\xF3\x0F\x00\x00\x00\x00\x00\x00\x0F\x57\x00\xF3\x0F\x00\x00\xF3\x0F\x00\x00\xF3\x0F\x00\x00\x00\x00\x00\x00\x0F\x57\x00\xF3\x0F\x00\x00\xF3\x0F\x00\x00\x0F\x28", "xx??????xx?xx??xx??xx??????xx?xx??xx??xx"
-        uint8_t* HudScaleScanResult = Memory::PatternScan(baseModule, "F3 0F ? ? ? ? ? ? 0F 57 ? F3 0F ? ? F3 0F ? ? F3 0F ? ? ? ? ? ? 0F 57 ? F3 0F ? ? F3 0F ? ? 0F 28");
+        // Address of signature = rerev.exe + 0x007A120A
+        // "\x0F\x57\x00\xF3\x0F\x00\x00\xF3\x0F\x00\x00\xF3\x0F\x00\x00\x00\x00\x00\x00\x0F\x57\x00\xF3\x0F\x00\x00\xF3\x0F\x00\x00\x0F\x28", "xx?xx??xx??xx??????xx?xx??xx??xx"
+        uint8_t* HudScaleScanResult = Memory::PatternScan(baseModule, "0F 57 ? F3 0F ? ? F3 0F ? ? F3 0F ? ? ? ? ? ? 0F 57 ? F3 0F ? ? F3 0F ? ? 0F 28");
         if (HudScaleScanResult) {
-            int HudScaleHookLength = 8;
+            int HudScaleHookLength = 11;
             DWORD HudScaleAddress = (intptr_t)HudScaleScanResult;
             HudScaleValue = (float)(fNativeAspect / fDesktopAspect) * 2;
+            if (iCustomResX > 0 && iCustomResY > 0)
+            {
+                HudScaleValue = (float)(fNativeAspect / fCustomAspect) * 2;
+            }
             HudScaleReturnJMP = HudScaleAddress + HudScaleHookLength;
             Memory::Hook((void*)HudScaleAddress, HudScale_CC, HudScaleHookLength);
+            #if _DEBUG
             std::cout << "Hud Scale set to: " << HudScaleValue << std::endl;
+            #endif
         }
 
-        // Address of signature = rerev.exe + 0x007895A1
         // "\xF3\x0F\x00\x00\x00\x00\x00\x00\x0F\x28\x00\xF3\x0F\x00\x00\x00\x00\xF3\x0F\x00\x00\x00\x00\x00\x00\xF3\x0F\x00\x00\xF3\x0F\x00\x00\xF3\x0F\x00\x00\xF3\x0F\x00\x00\x00\xF3\x0F\x00\x00\x00\xF3\x0F\x00\x00\x00\x83\x66\x4C", "xx??????xx?xx????xx??????xx??xx??xx??xx???xx???xx???xxx"
         uint8_t* HudLeftOffsetScanResult = Memory::PatternScan(baseModule, "F3 0F ? ? ? ? ? ? 0F 28 ? F3 0F ? ? ? ? F3 0F ? ? ? ? ? ? F3 0F ? ? F3 0F ? ? F3 0F ? ? F3 0F ? ? ? F3 0F ? ? ? F3 0F ? ? ? 83 66 4C");
         if (HudLeftOffsetScanResult) {
@@ -166,11 +205,13 @@ void HUDFix()
             HudLeftOffsetValue = (float)fNativeAspect / fDesktopAspect;
             if (iCustomResX > 0 && iCustomResY > 0)
             {
-                HudLeftOffsetValue = fCustomAspect;
+                HudLeftOffsetValue = (float)fNativeAspect / fCustomAspect;
             }
             HudLeftOffsetReturnJMP = HudLeftOffsetAddress + HudLeftOffsetHookLength;
             Memory::Hook((void*)HudLeftOffsetAddress, HudLeftOffset_CC, HudLeftOffsetHookLength);
+            #if _DEBUG
             std::cout << "Hud Left Offset set to: " << HudLeftOffsetValue << std::endl;
+            #endif
         }
     } 
 }
@@ -240,6 +281,48 @@ void FPSCap()
     }
 }
 
+void IncreaseQuality()
+{
+    if (bShadowQuality && iShadowQuality > 1024)
+    {
+        // Address of signature = rerev.exe + 0x007BC370
+        //"\x8B\x44\x00\x00\x83\xC0\x00\x56\x8B\xF1\x83\xE0\x00\x39\x46\x00\x74\x00\x89\x46", "xx??xx?xxxxx?xx?x?xx"
+        uint8_t* ShadowQualityScanResult = Memory::PatternScan(baseModule, "8B 44 ? ? 83 C0 ? 56 8B F1 83 E0 ? 39 46 ? 74 ? 89 46");
+        if (ShadowQualityScanResult)
+        {
+            int ShadowQualityHookLength = 8;
+            DWORD ShadowQualityAddress = (intptr_t)ShadowQualityScanResult;
+            ShadowQualityReturnJMP = ShadowQualityAddress + ShadowQualityHookLength;
+            Memory::Hook((void*)ShadowQualityAddress, ShadowQuality_CC, ShadowQualityHookLength);
+            #if _DEBUG
+            std::cout << "Shadow resolution changed to: " << iShadowQuality << std::endl;
+            #endif
+        }
+    }
+}
+
+void MovieFix()
+{
+    //Address of signature = rerev.exe + 0x007ABE52
+    //"\xDA\x4C\x00\x00\x89\x44\x00\x00\xD9\x6C", "xx??xx??xx"
+    uint8_t* MovieFixScanResult = Memory::PatternScan(baseModule, "DA 4C ? ? 89 44 ? ? D9 6C");
+    if (MovieFixScanResult)
+    {
+        int MovieFixHookLength = 8;
+        DWORD MovieFixAddress = (intptr_t)MovieFixScanResult;
+        MovieFixValue = (int)fDesktopRight * (fNativeAspect / fDesktopAspect);
+        if (iCustomResX > 0 && iCustomResY > 0)
+        {
+            MovieFixValue = (int)iCustomResX * (fNativeAspect / fCustomAspect);
+        }
+        MovieFixReturnJMP = MovieFixAddress + MovieFixHookLength;
+        Memory::Hook((void*)MovieFixAddress, MovieFix_CC, MovieFixHookLength);
+        #if _DEBUG
+        std::cout << "Movie playback set to: " << MovieFixValue << "x" << (int)fDesktopBottom << std::endl;
+        #endif
+    }
+}
+
 DWORD __stdcall Main(void*)
 {
     #if _DEBUG
@@ -253,6 +336,8 @@ DWORD __stdcall Main(void*)
     HUDFix();
     AdjustFOV();
     FPSCap();
+    IncreaseQuality();
+    MovieFix();
 
     return true; // end thread
 }

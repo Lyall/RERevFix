@@ -37,5 +37,11 @@
     <None Include="src\proxy.def">
       <Filter>Source Files</Filter>
     </None>
+    <None Include="README.md">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="RERevFix.ini">
+      <Filter>Source Files</Filter>
+    </None>
   </ItemGroup>
 </Project>
