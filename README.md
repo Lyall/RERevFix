@@ -16,21 +16,19 @@ This is a DLL hook that fixes various issues with Resident Evil Revelations rela
 - Edit **RERevFix.ini** to enable/adjust features.
 
 ## Troubleshooting
-- 
+1. **It crashes after the "Loading content" screen.**<br />
+  Open up "%localappdata%\CAPCOM\RESIDENT EVIL REVELATIONS\config.ini" in a text editor. Find the line "Resolution" and make sure it is set to your chosen resolution.
 
 ## Known Issues
-- 
+- The first time you start the game the fix may not work properly. This is because it needs to write to your game config and a restart is required for the first boot. If you encounter this, simply restart the game.
+- Movie playback is anchored to the left side of the screen.
+- Map marker for the player is misaligned with the map.
 
 ## Screenshots
 
-| ![20220430010145_1](https://user-images.githubusercontent.com/695941/166082065-67568c51-8e1e-4cd1-af49-5e956860a47a.jpg) |
+| ![20220508014924_1](https://user-images.githubusercontent.com/695941/167277058-44142418-56ba-4958-ac11-9c5ed6b5e78a.jpg) |
 |:--:|
-| 21:9 with colour filter removal and adjusted FOV. |
-
-| ![re5dx9_2022_04_28_08_07_39_715](https://user-images.githubusercontent.com/695941/165991472-15f70372-551e-45b7-a48c-2323eb52e605.jpg) |
-|:--:|
-| 32:9 with working cutscenes! |
-
+| 21:9 with adjusted FOV and high quality shadows. |
 
 ## Credits
 [RERevHook](https://www.nexusmods.com/residentevilrevelations/mods/26) for the DLL proxy code.<br />
