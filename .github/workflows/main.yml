@@ -21,7 +21,7 @@ jobs:
       uses: microsoft/setup-msbuild@v1.1
       
     - run: msbuild ${{ github.event.repository.name }}.sln -t:rebuild -verbosity:diag -property:Configuration=Release -property:Platform=x86
-    - run: cp Release\xinput1_3.ll xinput1_3.dll
+    - run: cp Release\xinput1_3.dll xinput1_3.dll
     - run: 7z a -tzip ${{ github.event.repository.name }}_${{ github.event.inputs.version }}.zip README.md ${{ github.event.repository.name }}.ini xinput1_3.dll
     
     - uses: ncipollo/release-action@v1
