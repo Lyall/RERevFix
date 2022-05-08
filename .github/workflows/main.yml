@@ -1,0 +1,33 @@
+name: create-release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version number'
+        required: true
+        
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: 'true'
+
+    - name: setup-msbuild
+      uses: microsoft/setup-msbuild@v1.1
+      
+    - run: msbuild ${{ github.event.repository.name }}.sln -t:rebuild -verbosity:diag -property:Configuration=Release -property:Platform=x86
+    - run: 7z a -tzip ${{ github.event.repository.name }}_${{ github.event.inputs.version }}.zip README.md ${{ github.event.repository.name }}.ini Release\xinput1_3.dll
+    
+    - uses: ncipollo/release-action@v1
+      with:
+        artifacts: "${{ github.event.repository.name }}_${{ github.event.inputs.version }}.zip"
+        token: ${{ secrets.GITHUB_TOKEN }}
+        tag: ${{ github.event.inputs.version }}
+        name: "${{ github.event.inputs.version }}"
+        draft: true
+        generateReleaseNotes: true
+        bodyFile: "release_body.md"
+        artifactErrorsFailBuild: true
