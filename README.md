@@ -10,6 +10,9 @@ This is a DLL hook that fixes various issues with Resident Evil Revelations rela
 - Uncap 120 FPS limit.
 - Adjust shadow quality.
 
+## Warning
+- ### This game uses Valve Anti Cheat for raid mode in multiplayer. <br /> I highly recommend that you **DO NOT** play this mode with this fix installed. 
+
 ## Installation
 - Downloaded the [latest release](https://github.com/Lyall/RERevFix/releases) of RERevFix.
 - Unzip in to the game directory (e.g **steamapps/common/RESIDENT EVIL REVELATIONS**).
