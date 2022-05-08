@@ -17,7 +17,7 @@ This is a DLL hook that fixes various issues with Resident Evil Revelations rela
 
 ## Troubleshooting
 1. **It crashes after the "Loading content" screen.**<br />
-  Open up "%localappdata%\CAPCOM\RESIDENT EVIL REVELATIONS\config.ini" in a text editor. Find the line "Resolution" and make sure it is set to your chosen resolution.
+  Open up "**%localappdata%\CAPCOM\RESIDENT EVIL REVELATIONS\config.ini**" in a text editor. Find the line "**Resolution**" and make sure it is set to your chosen resolution.
 
 ## Known Issues
 - The first time you start the game the fix may not work properly. This is because it needs to write to your game config and a restart is required for the first boot. If you encounter this, simply restart the game.
