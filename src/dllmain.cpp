@@ -331,8 +331,8 @@ DWORD __stdcall Main(void*)
     std::cout << "Console initiated" << std::endl;
     #endif	
     ReadConfig();
+    Sleep(500); // delay first
     AspectRatio();
-    Sleep(1000); // delay first
     HUDFix();
     AdjustFOV();
     FPSCap();
